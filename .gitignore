@@ -1,0 +1,6 @@
+node_modules/
+
+# รูปและวิดิโอที่ upload (ไฟล์ใหญ่ ไม่ควรขึ้น git)
+public/assets/
+
+# .md files ขึ้น git ด้วย

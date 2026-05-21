@@ -1,0 +1,1521 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TikTok Content Manager</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f0f0f;
+      --surface: #1a1a1a;
+      --surface2: #222222;
+      --surface3: #2a2a2a;
+      --border: #2e2e2e;
+      --border2: #3a3a3a;
+      --accent: #f59e0b;
+      --accent-dim: rgba(245,158,11,0.15);
+      --accent-border: rgba(245,158,11,0.3);
+      --green: #34d399;
+      --green-dim: rgba(52,211,153,0.1);
+      --pink: #f472b6;
+      --pink-dim: rgba(244,114,182,0.1);
+      --blue: #60a5fa;
+      --blue-dim: rgba(96,165,250,0.1);
+      --text: #e5e5e5;
+      --text-muted: #888;
+      --text-dim: #555;
+      --code-bg: #111;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --radius-xs: 6px;
+    }
+
+    body {
+      font-family: 'Sarabun', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* ─── Scrollbar ──────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #4a4a4a; }
+
+    /* ─── Topbar ─────────────────────────────────────────────────── */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 200;
+      background: rgba(15,15,15,0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      height: 56px;
+    }
+
+    .logo {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--accent);
+      white-space: nowrap;
+      letter-spacing: -0.01em;
+    }
+    .logo span { color: var(--text-muted); font-weight: 400; }
+
+    .topbar-sep { width: 1px; height: 24px; background: var(--border); flex-shrink: 0; }
+
+    #file-select {
+      flex: 1;
+      max-width: 420px;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-xs);
+      color: var(--text);
+      font-family: 'Sarabun', sans-serif;
+      font-size: 0.875rem;
+      padding: 7px 12px;
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    #file-select:hover, #file-select:focus { border-color: var(--accent); }
+    #file-select option { background: #1a1a1a; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      border-radius: var(--radius-xs);
+      font-family: 'Sarabun', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.15s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #000;
+      border-color: var(--accent);
+    }
+    .btn-primary:hover { background: #e08d00; border-color: #e08d00; }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-muted);
+      border-color: var(--border2);
+    }
+    .btn-ghost:hover { background: var(--surface2); color: var(--text); border-color: var(--border2); }
+
+    .btn-sm {
+      padding: 5px 10px;
+      font-size: 0.8rem;
+    }
+
+    /* ─── Layout ─────────────────────────────────────────────────── */
+    .main {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 24px 20px 100px;
+    }
+
+    /* ─── Drop Zone ──────────────────────────────────────────────── */
+    #drop-zone {
+      border: 2px dashed var(--border2);
+      border-radius: var(--radius);
+      padding: 60px 40px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: var(--surface);
+    }
+    #drop-zone.drag-over {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+    #drop-zone:hover { border-color: var(--border2); background: var(--surface2); }
+    .drop-icon { font-size: 3rem; margin-bottom: 12px; }
+    .drop-title { font-size: 1rem; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+    .drop-sub { font-size: 0.85rem; color: var(--text-muted); }
+    #md-file-input { display: none; }
+
+    /* ─── Warning Banner ─────────────────────────────────────────── */
+    .warning-banner {
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.3);
+      border-left: 3px solid #ef4444;
+      border-radius: var(--radius-xs);
+      padding: 10px 16px;
+      font-size: 0.875rem;
+      color: #fca5a5;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ─── Pack Title ─────────────────────────────────────────────── */
+    .pack-title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      line-height: 1.4;
+    }
+
+    /* ─── Cards ──────────────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 16px;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+    .card:hover { border-color: var(--border2); }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 13px 16px;
+      cursor: pointer;
+      user-select: none;
+      gap: 12px;
+      transition: background 0.15s;
+    }
+    .card-header:hover { background: rgba(255,255,255,0.02); }
+
+    .card-header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .scene-badge {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 4px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .badge-char { background: rgba(245,158,11,0.12); color: var(--accent); border: 1px solid var(--accent-border); }
+    .badge-scene { background: var(--blue-dim); color: var(--blue); border: 1px solid rgba(96,165,250,0.25); }
+
+    .card-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .chevron { color: var(--text-dim); font-size: 0.7rem; transition: transform 0.2s; flex-shrink: 0; }
+    .card.open .chevron { transform: rotate(180deg); }
+
+    .card-body {
+      display: none;
+      padding: 0 16px 16px;
+    }
+    .card.open .card-body { display: block; }
+
+    /* ─── Context ────────────────────────────────────────────────── */
+    .context-wrap {
+      border-top: 1px solid var(--border);
+      padding: 12px 0 14px;
+      margin-bottom: 14px;
+    }
+    .context-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+    .context-text {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+
+    /* ─── Prompt Block ───────────────────────────────────────────── */
+    .prompt-block { margin-bottom: 14px; }
+
+    .prompt-label-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 7px;
+      gap: 8px;
+    }
+
+    .prompt-type-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .lbl-img { color: var(--green); }
+    .lbl-vid { color: var(--pink); }
+    .lbl-dial { color: var(--accent); }
+    .lbl-char { color: var(--blue); }
+
+    .prompt-actions { display: flex; align-items: center; gap: 6px; }
+
+    /* ─── Editable content ───────────────────────────────────────── */
+    .editable-wrap {
+      position: relative;
+    }
+    .editable-wrap:hover .edit-hint { opacity: 1; }
+    .edit-hint {
+      position: absolute;
+      top: 7px;
+      right: 8px;
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      opacity: 0;
+      transition: opacity 0.2s;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .prompt-display {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xs);
+      padding: 12px 14px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.77rem;
+      line-height: 1.75;
+      color: #ccc;
+      white-space: pre-wrap;
+      word-break: break-word;
+      cursor: text;
+      transition: border-color 0.15s;
+      min-height: 60px;
+    }
+    .prompt-display:hover { border-color: var(--border2); }
+
+    .dialogue-display {
+      background: var(--accent-dim);
+      border: 1px solid var(--accent-border);
+      border-left: 3px solid var(--accent);
+      border-radius: var(--radius-xs);
+      padding: 12px 14px;
+      font-size: 0.95rem;
+      font-style: italic;
+      color: #fde68a;
+      line-height: 1.65;
+      cursor: text;
+      transition: border-color 0.15s;
+    }
+    .dialogue-display:hover { border-left-color: var(--accent); }
+
+    .char-display {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xs);
+      padding: 12px 14px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.77rem;
+      line-height: 1.75;
+      color: #ccc;
+      white-space: pre-wrap;
+      word-break: break-word;
+      cursor: text;
+    }
+
+    .prompt-textarea {
+      width: 100%;
+      background: var(--code-bg);
+      border: 1px solid var(--accent);
+      border-radius: var(--radius-xs);
+      padding: 12px 14px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.77rem;
+      line-height: 1.75;
+      color: #ccc;
+      resize: vertical;
+      outline: none;
+      min-height: 80px;
+      display: none;
+    }
+    .dialogue-textarea {
+      width: 100%;
+      background: var(--accent-dim);
+      border: 1px solid var(--accent);
+      border-left: 3px solid var(--accent);
+      border-radius: var(--radius-xs);
+      padding: 12px 14px;
+      font-family: 'Sarabun', sans-serif;
+      font-size: 0.95rem;
+      font-style: italic;
+      color: #fde68a;
+      line-height: 1.65;
+      resize: vertical;
+      outline: none;
+      min-height: 60px;
+      display: none;
+    }
+
+    /* ─── Copy button ────────────────────────────────────────────── */
+    .copy-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-xs);
+      color: var(--text-muted);
+      font-family: 'Sarabun', sans-serif;
+      font-size: 0.77rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .copy-btn:hover { background: var(--surface3); color: var(--text); border-color: var(--border2); }
+    .copy-btn.copied { border-color: var(--green); color: var(--green); background: var(--green-dim); }
+
+    /* ─── Section divider ────────────────────────────────────────── */
+    .section-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 16px 0 10px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+    }
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ─── Media Gallery ──────────────────────────────────────────── */
+    .media-gallery {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: flex-start;
+      margin-top: 8px;
+    }
+
+    .thumb-wrap {
+      position: relative;
+      width: 120px;
+      height: 120px;
+      border-radius: var(--radius-xs);
+      overflow: hidden;
+      background: var(--surface3);
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .thumb-wrap:hover { border-color: var(--accent); transform: scale(1.02); }
+    .thumb-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .thumb-actions {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(transparent, rgba(0,0,0,0.85));
+      padding: 20px 4px 4px;
+      display: flex;
+      gap: 3px;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .thumb-wrap:hover .thumb-actions { opacity: 1; }
+
+    .thumb-action-btn {
+      flex: 1;
+      padding: 3px 0;
+      background: rgba(255,255,255,0.1);
+      border: none;
+      border-radius: 3px;
+      color: #fff;
+      font-size: 0.65rem;
+      cursor: pointer;
+      text-align: center;
+      transition: background 0.1s;
+    }
+    .thumb-action-btn:hover { background: rgba(255,255,255,0.2); }
+    .thumb-action-btn.danger:hover { background: rgba(239,68,68,0.5); }
+
+    /* Video card */
+    .video-card {
+      width: 150px;
+      background: var(--surface3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xs);
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+    .video-card:hover { border-color: var(--pink); transform: scale(1.02); }
+
+    .video-thumb {
+      height: 90px;
+      background: var(--code-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      position: relative;
+    }
+    .video-play-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .video-card:hover .video-play-overlay { opacity: 1; }
+    .video-play-icon { font-size: 1.8rem; }
+
+    .video-info {
+      padding: 6px 8px;
+    }
+    .video-filename {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 4px;
+    }
+    .video-actions { display: flex; gap: 4px; }
+
+    /* Upload button card */
+    .upload-card {
+      width: 120px;
+      height: 120px;
+      background: var(--surface2);
+      border: 1.5px dashed var(--border2);
+      border-radius: var(--radius-xs);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      cursor: pointer;
+      transition: all 0.15s;
+      flex-shrink: 0;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+    }
+    .upload-card:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+    .upload-card .up-icon { font-size: 1.5rem; }
+
+    .upload-card-vid {
+      width: 150px;
+      height: 120px;
+    }
+
+    /* ─── Lightbox ───────────────────────────────────────────────── */
+    .lightbox {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: rgba(0,0,0,0.92);
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+    }
+    .lightbox.active { display: flex; }
+
+    .lightbox-close {
+      position: absolute;
+      top: 16px;
+      right: 20px;
+      font-size: 1.5rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      background: none;
+      border: none;
+      transition: color 0.15s;
+    }
+    .lightbox-close:hover { color: #fff; }
+
+    .lightbox-img {
+      max-width: 90vw;
+      max-height: 85vh;
+      object-fit: contain;
+      border-radius: var(--radius-xs);
+    }
+
+    .lightbox-caption {
+      margin-top: 10px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .lightbox-actions {
+      margin-top: 10px;
+      display: flex;
+      gap: 8px;
+    }
+
+    /* ─── Video Modal ────────────────────────────────────────────── */
+    .video-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: rgba(0,0,0,0.95);
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+    }
+    .video-modal.active { display: flex; }
+
+    .video-modal-inner {
+      max-width: 90vw;
+      max-height: 85vh;
+    }
+    .video-modal video {
+      max-width: 90vw;
+      max-height: 80vh;
+      border-radius: var(--radius-xs);
+    }
+
+    /* ─── Toast ──────────────────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--surface3);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-xs);
+      padding: 10px 20px;
+      font-size: 0.875rem;
+      color: var(--text);
+      transition: transform 0.25s ease;
+      z-index: 500;
+      white-space: nowrap;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* ─── States ─────────────────────────────────────────────────── */
+    .state-msg {
+      text-align: center;
+      padding: 80px 20px;
+      color: var(--text-muted);
+    }
+    .state-icon { font-size: 2.5rem; margin-bottom: 12px; }
+    .state-title { font-size: 1rem; font-weight: 600; margin-bottom: 6px; color: var(--text); }
+    .state-sub { font-size: 0.85rem; }
+
+    .spinner {
+      width: 28px; height: 28px;
+      border: 3px solid var(--border2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.65s linear infinite;
+      margin: 0 auto 14px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── Saving indicator ───────────────────────────────────────── */
+    #save-indicator {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      transition: color 0.3s;
+    }
+    #save-indicator.saving { color: var(--accent); }
+    #save-indicator.saved { color: var(--green); }
+
+    /* ─── Responsive ─────────────────────────────────────────────── */
+    @media (max-width: 600px) {
+      .topbar { padding: 0 12px; gap: 8px; }
+      .main { padding: 16px 12px 80px; }
+      #file-select { max-width: 200px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Topbar -->
+<header class="topbar">
+  <div class="logo">🎵 TikTok <span>Content Manager</span></div>
+  <div class="topbar-sep"></div>
+  <select id="file-select">
+    <option value="">— กำลังโหลด... —</option>
+  </select>
+  <span id="save-indicator"></span>
+  <button class="btn btn-primary btn-sm" id="upload-md-btn">📤 อัพโหลด .md</button>
+  <input type="file" id="md-file-input" accept=".md" />
+</header>
+
+<!-- Main content -->
+<main class="main" id="main-content">
+  <div class="state-msg" id="welcome-state">
+    <div class="state-icon">📂</div>
+    <div class="state-title">ยังไม่ได้เลือกไฟล์</div>
+    <div class="state-sub">เลือก .md ไฟล์จาก dropdown ด้านบน หรืออัพโหลดไฟล์ใหม่</div>
+  </div>
+  <!-- Drop zone shown initially -->
+  <div id="drop-zone" style="display:none;">
+    <div class="drop-icon">📁</div>
+    <div class="drop-title">ลาก .md ไฟล์มาวางตรงนี้</div>
+    <div class="drop-sub">หรือคลิกเพื่อเลือกไฟล์</div>
+  </div>
+</main>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" id="lightbox-close">✕</button>
+  <img class="lightbox-img" id="lightbox-img" src="" alt="" />
+  <div class="lightbox-caption" id="lightbox-caption"></div>
+  <div class="lightbox-actions">
+    <a id="lightbox-download" class="btn btn-ghost btn-sm" download>⬇️ ดาวน์โหลด</a>
+  </div>
+</div>
+
+<!-- Video Modal -->
+<div class="video-modal" id="video-modal">
+  <button class="lightbox-close" id="video-modal-close">✕</button>
+  <div class="video-modal-inner">
+    <video id="modal-video" controls></video>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+'use strict';
+
+// ─── State ──────────────────────────────────────────────────────────────────
+let currentFile = null;
+let currentPack = null;      // parsed pack data
+let currentPackName = null;  // filename without .md
+let currentAssets = {};      // { scene1: { images:[], videos:[] } }
+let saveTimer = null;
+
+// ─── Toast ──────────────────────────────────────────────────────────────────
+function showToast(msg, duration = 2500) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), duration);
+}
+
+// ─── Save indicator ──────────────────────────────────────────────────────────
+function setSaveState(state) {
+  const el = document.getElementById('save-indicator');
+  el.className = state;
+  if (state === 'saving') el.textContent = '⏳ กำลังบันทึก...';
+  else if (state === 'saved') el.textContent = '💾 บันทึกแล้ว';
+  else el.textContent = '';
+}
+
+// ─── Clipboard ───────────────────────────────────────────────────────────────
+async function copyToClipboard(text, btn) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.cssText = 'position:fixed;opacity:0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+    const orig = btn.innerHTML;
+    btn.classList.add('copied');
+    btn.innerHTML = '✅ Copied!';
+    setTimeout(() => { btn.classList.remove('copied'); btn.innerHTML = orig; }, 2000);
+  } catch (e) {
+    showToast('ไม่สามารถคัดลอกได้');
+  }
+}
+
+// ─── Markdown Parser ─────────────────────────────────────────────────────────
+function extractCodeBlock(text) {
+  const m = text.match(/```[^\n]*\n([\s\S]*?)```/);
+  return m ? m[1].trim() : text.trim();
+}
+
+function extractBlockquote(text) {
+  return text.split('\n')
+    .filter(l => l.trim())
+    .map(l => l.replace(/^>\s?/, ''))
+    .join('\n')
+    .trim();
+}
+
+function parsePack(raw) {
+  const result = { title: '', character: '', scenes: [], valid: false };
+
+  const titleM = raw.match(/^#\s+(.+)/m);
+  if (titleM) result.title = titleM[1].trim();
+
+  // Validate structure
+  const hasChar = /##\s+🎭\s+Character Card/.test(raw);
+  const hasScene = /##\s+🎬/.test(raw);
+  result.valid = hasChar && hasScene;
+
+  // Character card
+  const charM = raw.match(/##\s+🎭\s+Character Card\s*\n([\s\S]*?)(?=\n##\s|\n---)/);
+  if (charM) result.character = extractCodeBlock(charM[1]);
+
+  // Scenes
+  const sceneParts = raw.split(/(?=##\s+🎬)/g).slice(1);
+  for (const part of sceneParts) {
+    const scene = { title: '', context: '', imagePrompt: '', videoPrompt: '', dialogue: '' };
+
+    const headM = part.match(/##\s+🎬\s+(.+)/);
+    if (headM) scene.title = headM[1].trim();
+
+    const ctxM = part.match(/\*\*Context:\*\*\s*(.+)/);
+    if (ctxM) scene.context = ctxM[1].trim();
+
+    const imgM = part.match(/###\s+🖼️\s+Image Prompt\s*\n([\s\S]*?)(?=###\s+|##\s+|---|\s*$)/);
+    if (imgM) scene.imagePrompt = extractCodeBlock(imgM[1]);
+
+    const vidM = part.match(/###\s+🎥\s+Video Prompt\s*\n([\s\S]*?)(?=###\s+|##\s+|---|\s*$)/);
+    if (vidM) scene.videoPrompt = extractCodeBlock(vidM[1]);
+
+    const dialM = part.match(/###\s+🎙️\s+บทพูด\s*\n([\s\S]*?)(?=###\s+|##\s+|---|\s*$)/);
+    if (dialM) scene.dialogue = extractBlockquote(dialM[1]);
+
+    if (scene.title) result.scenes.push(scene);
+  }
+
+  return result;
+}
+
+// Rebuild raw markdown from parsed pack
+function rebuildMarkdown(pack) {
+  let out = `# ${pack.title}\n\n`;
+  out += `## 🎭 Character Card\n\`\`\`\n${pack.character}\n\`\`\`\n\n---\n\n`;
+
+  pack.scenes.forEach((scene, i) => {
+    out += `## 🎬 ${scene.title}\n`;
+    if (scene.context) out += `**Context:** ${scene.context}\n\n`;
+    out += `### 🖼️ Image Prompt\n\`\`\`\n${scene.imagePrompt}\n\`\`\`\n\n`;
+    out += `### 🎥 Video Prompt\n\`\`\`\n${scene.videoPrompt}\n\`\`\`\n\n`;
+    out += `### 🎙️ บทพูด\n> "${scene.dialogue}"\n\n---\n\n`;
+  });
+
+  return out.trimEnd() + '\n';
+}
+
+// ─── Auto-save ────────────────────────────────────────────────────────────────
+function triggerSave() {
+  if (!currentFile || !currentPack) return;
+  clearTimeout(saveTimer);
+  setSaveState('saving');
+  saveTimer = setTimeout(async () => {
+    try {
+      const content = rebuildMarkdown(currentPack);
+      const res = await fetch(`/api/file/${encodeURIComponent(currentFile)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content })
+      });
+      if (!res.ok) throw new Error('Save failed');
+      setSaveState('saved');
+      showToast('💾 บันทึกแล้ว');
+      setTimeout(() => setSaveState(''), 3000);
+    } catch (e) {
+      setSaveState('');
+      showToast('❌ บันทึกไม่สำเร็จ');
+    }
+  }, 1500);
+}
+
+// ─── Inline editing helpers ───────────────────────────────────────────────────
+function makeEditableBlock(displayEl, textareaEl, getValue, setValue) {
+  let editing = false;
+
+  function startEdit() {
+    if (editing) return;
+    editing = true;
+    displayEl.style.display = 'none';
+    textareaEl.style.display = 'block';
+    textareaEl.value = getValue();
+    textareaEl.style.height = 'auto';
+    textareaEl.style.height = Math.max(textareaEl.scrollHeight, 80) + 'px';
+    textareaEl.focus();
+  }
+
+  function endEdit() {
+    if (!editing) return;
+    editing = false;
+    const val = textareaEl.value.trim();
+    setValue(val);
+    displayEl.textContent = val || '—';
+    displayEl.style.display = '';
+    textareaEl.style.display = 'none';
+    triggerSave();
+  }
+
+  displayEl.addEventListener('click', startEdit);
+
+  textareaEl.addEventListener('blur', endEdit);
+  textareaEl.addEventListener('keydown', e => {
+    if (e.key === 's' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      endEdit();
+    }
+    if (e.key === 'Escape') endEdit();
+    // auto-resize
+    textareaEl.style.height = 'auto';
+    textareaEl.style.height = textareaEl.scrollHeight + 'px';
+  });
+  textareaEl.addEventListener('input', () => {
+    textareaEl.style.height = 'auto';
+    textareaEl.style.height = textareaEl.scrollHeight + 'px';
+  });
+}
+
+// ─── Make copy button ─────────────────────────────────────────────────────────
+function makeCopyBtn(getTextFn, small = true) {
+  const btn = document.createElement('button');
+  btn.className = 'copy-btn' + (small ? '' : '');
+  btn.innerHTML = '📋 Copy';
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    copyToClipboard(getTextFn(), btn);
+  });
+  return btn;
+}
+
+// ─── Lightbox ─────────────────────────────────────────────────────────────────
+function openLightbox(url, filename) {
+  const lb = document.getElementById('lightbox');
+  document.getElementById('lightbox-img').src = url;
+  document.getElementById('lightbox-caption').textContent = filename;
+  const dl = document.getElementById('lightbox-download');
+  dl.href = url;
+  dl.download = filename;
+  lb.classList.add('active');
+}
+
+document.getElementById('lightbox-close').addEventListener('click', () => {
+  document.getElementById('lightbox').classList.remove('active');
+});
+document.getElementById('lightbox').addEventListener('click', e => {
+  if (e.target === document.getElementById('lightbox'))
+    document.getElementById('lightbox').classList.remove('active');
+});
+
+// ─── Video Modal ──────────────────────────────────────────────────────────────
+function openVideoModal(url) {
+  const modal = document.getElementById('video-modal');
+  const video = document.getElementById('modal-video');
+  video.src = url;
+  modal.classList.add('active');
+  video.play();
+}
+
+document.getElementById('video-modal-close').addEventListener('click', () => {
+  document.getElementById('video-modal').classList.remove('active');
+  document.getElementById('modal-video').pause();
+  document.getElementById('modal-video').src = '';
+});
+document.getElementById('video-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('video-modal')) {
+    document.getElementById('video-modal').classList.remove('active');
+    document.getElementById('modal-video').pause();
+    document.getElementById('modal-video').src = '';
+  }
+});
+
+// ─── Asset helpers ────────────────────────────────────────────────────────────
+function imageUrl(pack, scene, filename) {
+  return `/api/assets/${encodeURIComponent(pack)}/${scene}/images/${encodeURIComponent(filename)}`;
+}
+function videoUrl(pack, scene, filename) {
+  return `/api/assets/${encodeURIComponent(pack)}/${scene}/videos/${encodeURIComponent(filename)}`;
+}
+
+// ─── Render image thumbnail ───────────────────────────────────────────────────
+function renderImageThumb(pack, scene, filename, galleryEl) {
+  const wrap = document.createElement('div');
+  wrap.className = 'thumb-wrap';
+  wrap.dataset.filename = filename;
+
+  const img = document.createElement('img');
+  img.src = imageUrl(pack, scene, filename);
+  img.alt = filename;
+  img.loading = 'lazy';
+
+  const actions = document.createElement('div');
+  actions.className = 'thumb-actions';
+
+  const dlBtn = document.createElement('button');
+  dlBtn.className = 'thumb-action-btn';
+  dlBtn.textContent = '⬇️';
+  dlBtn.title = 'ดาวน์โหลด';
+  dlBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    const a = document.createElement('a');
+    a.href = imageUrl(pack, scene, filename);
+    a.download = filename;
+    a.click();
+  });
+
+  const delBtn = document.createElement('button');
+  delBtn.className = 'thumb-action-btn danger';
+  delBtn.textContent = '🗑️';
+  delBtn.title = 'ลบ';
+  delBtn.addEventListener('click', async e => {
+    e.stopPropagation();
+    if (!confirm(`ลบรูป ${filename}?`)) return;
+    await fetch(`/api/assets/${encodeURIComponent(pack)}/${scene}/images/${encodeURIComponent(filename)}`, { method: 'DELETE' });
+    wrap.remove();
+  });
+
+  actions.appendChild(dlBtn);
+  actions.appendChild(delBtn);
+  wrap.appendChild(img);
+  wrap.appendChild(actions);
+
+  wrap.addEventListener('click', () => openLightbox(imageUrl(pack, scene, filename), filename));
+
+  galleryEl.appendChild(wrap);
+}
+
+// ─── Render video card ────────────────────────────────────────────────────────
+function renderVideoCard(pack, scene, filename, galleryEl) {
+  const card = document.createElement('div');
+  card.className = 'video-card';
+  card.dataset.filename = filename;
+
+  const thumb = document.createElement('div');
+  thumb.className = 'video-thumb';
+  thumb.innerHTML = '🎥';
+
+  const overlay = document.createElement('div');
+  overlay.className = 'video-play-overlay';
+  overlay.innerHTML = '<span class="video-play-icon">▶</span>';
+  thumb.appendChild(overlay);
+
+  const info = document.createElement('div');
+  info.className = 'video-info';
+
+  const fname = document.createElement('div');
+  fname.className = 'video-filename';
+  // Show cleaned filename
+  const shortName = filename.replace(/_\d{13}(\.\w+)$/, '$1');
+  fname.textContent = shortName;
+  fname.title = filename;
+
+  const btns = document.createElement('div');
+  btns.className = 'video-actions';
+
+  const dlBtn = document.createElement('button');
+  dlBtn.className = 'btn btn-ghost btn-sm';
+  dlBtn.style.flex = '1';
+  dlBtn.innerHTML = '⬇️';
+  dlBtn.title = 'ดาวน์โหลด';
+  dlBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    const a = document.createElement('a');
+    a.href = videoUrl(pack, scene, filename);
+    a.download = filename;
+    a.click();
+  });
+
+  const delBtn = document.createElement('button');
+  delBtn.className = 'btn btn-ghost btn-sm';
+  delBtn.style.flex = '1';
+  delBtn.innerHTML = '🗑️';
+  delBtn.title = 'ลบ';
+  delBtn.addEventListener('click', async e => {
+    e.stopPropagation();
+    if (!confirm(`ลบวิดิโอ ${filename}?`)) return;
+    await fetch(`/api/assets/${encodeURIComponent(pack)}/${scene}/videos/${encodeURIComponent(filename)}`, { method: 'DELETE' });
+    card.remove();
+  });
+
+  btns.appendChild(dlBtn);
+  btns.appendChild(delBtn);
+  info.appendChild(fname);
+  info.appendChild(btns);
+
+  card.appendChild(thumb);
+  card.appendChild(info);
+  card.addEventListener('click', () => openVideoModal(videoUrl(pack, scene, filename)));
+
+  galleryEl.appendChild(card);
+}
+
+// ─── Build scene media section ────────────────────────────────────────────────
+function buildMediaSection(sceneKey, body) {
+  const pack = currentPackName;
+  const sceneAssets = currentAssets[sceneKey] || { images: [], videos: [] };
+
+  // Images section
+  const imgLabel = document.createElement('div');
+  imgLabel.className = 'section-label';
+  imgLabel.textContent = '📷 รูปภาพ';
+  body.appendChild(imgLabel);
+
+  const imgGallery = document.createElement('div');
+  imgGallery.className = 'media-gallery';
+  imgGallery.id = `gallery-${sceneKey}-images`;
+  body.appendChild(imgGallery);
+
+  // Existing images
+  sceneAssets.images.forEach(f => renderImageThumb(pack, sceneKey, f, imgGallery));
+
+  // Upload image button
+  const imgUploadCard = document.createElement('div');
+  imgUploadCard.className = 'upload-card';
+  imgUploadCard.innerHTML = '<span class="up-icon">📤</span><span>อัพโหลดรูป</span>';
+  const imgInput = document.createElement('input');
+  imgInput.type = 'file';
+  imgInput.accept = 'image/*';
+  imgInput.multiple = true;
+  imgInput.style.display = 'none';
+  imgInput.addEventListener('change', async () => {
+    if (!imgInput.files.length) return;
+    const fd = new FormData();
+    for (const f of imgInput.files) fd.append('images', f);
+    const res = await fetch(`/api/assets/${encodeURIComponent(pack)}/${sceneKey}/images`, { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.files) {
+      data.files.forEach(f => renderImageThumb(pack, sceneKey, f, imgGallery));
+      showToast(`✅ อัพโหลดรูป ${data.files.length} ไฟล์แล้ว`);
+    }
+    imgInput.value = '';
+  });
+  imgUploadCard.addEventListener('click', () => imgInput.click());
+  body.appendChild(imgInput);
+  imgGallery.appendChild(imgUploadCard);
+
+  // Videos section
+  const vidLabel = document.createElement('div');
+  vidLabel.className = 'section-label';
+  vidLabel.textContent = '🎬 วิดิโอ';
+  body.appendChild(vidLabel);
+
+  const vidGallery = document.createElement('div');
+  vidGallery.className = 'media-gallery';
+  vidGallery.id = `gallery-${sceneKey}-videos`;
+  body.appendChild(vidGallery);
+
+  // Existing videos
+  sceneAssets.videos.forEach(f => renderVideoCard(pack, sceneKey, f, vidGallery));
+
+  // Upload video button
+  const vidUploadCard = document.createElement('div');
+  vidUploadCard.className = 'upload-card upload-card-vid';
+  vidUploadCard.innerHTML = '<span class="up-icon">📤</span><span>อัพโหลดวิดิโอ</span>';
+  const vidInput = document.createElement('input');
+  vidInput.type = 'file';
+  vidInput.accept = 'video/*';
+  vidInput.multiple = true;
+  vidInput.style.display = 'none';
+  vidInput.addEventListener('change', async () => {
+    if (!vidInput.files.length) return;
+    const fd = new FormData();
+    for (const f of vidInput.files) fd.append('videos', f);
+    const res = await fetch(`/api/assets/${encodeURIComponent(pack)}/${sceneKey}/videos`, { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.files) {
+      data.files.forEach(f => renderVideoCard(pack, sceneKey, f, vidGallery));
+      showToast(`✅ อัพโหลดวิดิโอ ${data.files.length} ไฟล์แล้ว`);
+    }
+    vidInput.value = '';
+  });
+  vidUploadCard.addEventListener('click', () => vidInput.click());
+  body.appendChild(vidInput);
+  vidGallery.appendChild(vidUploadCard);
+}
+
+// ─── Render prompt block ──────────────────────────────────────────────────────
+function renderPromptBlock(labelClass, icon, label, getValue, setValue, isDialogue = false) {
+  const block = document.createElement('div');
+  block.className = 'prompt-block';
+
+  const labelRow = document.createElement('div');
+  labelRow.className = 'prompt-label-row';
+
+  const typeLabel = document.createElement('span');
+  typeLabel.className = `prompt-type-label ${labelClass}`;
+  typeLabel.innerHTML = `<span>${icon}</span><span>${label}</span>`;
+
+  const actions = document.createElement('div');
+  actions.className = 'prompt-actions';
+
+  const copyBtn = makeCopyBtn(getValue);
+  actions.appendChild(copyBtn);
+
+  labelRow.appendChild(typeLabel);
+  labelRow.appendChild(actions);
+  block.appendChild(labelRow);
+
+  const wrap = document.createElement('div');
+  wrap.className = 'editable-wrap';
+
+  const hint = document.createElement('span');
+  hint.className = 'edit-hint';
+  hint.textContent = '✏️ แก้ไข';
+
+  const display = document.createElement('div');
+  display.className = isDialogue ? 'dialogue-display' : 'prompt-display';
+  display.textContent = getValue() || '—';
+
+  const textarea = document.createElement('textarea');
+  textarea.className = isDialogue ? 'dialogue-textarea' : 'prompt-textarea';
+
+  wrap.appendChild(hint);
+  wrap.appendChild(display);
+  wrap.appendChild(textarea);
+  block.appendChild(wrap);
+
+  makeEditableBlock(display, textarea, getValue, setValue);
+
+  return block;
+}
+
+// ─── Render full pack ──────────────────────────────────────────────────────────
+function renderPack(pack) {
+  const frag = document.createDocumentFragment();
+
+  // Warning banner
+  if (!pack.valid) {
+    const banner = document.createElement('div');
+    banner.className = 'warning-banner';
+    banner.innerHTML = '⚠️ ไม่พบโครงสร้างที่รองรับ — แสดงข้อมูลที่พบได้';
+    frag.appendChild(banner);
+  }
+
+  // Pack title
+  const titleEl = document.createElement('h1');
+  titleEl.className = 'pack-title';
+  titleEl.textContent = pack.title || 'Content Pack';
+  frag.appendChild(titleEl);
+
+  // ─── Character Card ───
+  const charBodyEl = document.createElement('div');
+  charBodyEl.style.paddingTop = '14px';
+
+  const charBlock = renderPromptBlock('lbl-char', '👤', 'Character Description',
+    () => pack.character,
+    val => { pack.character = val; }
+  );
+  charBodyEl.appendChild(charBlock);
+
+  const charCard = makeCard('badge-char', '🎭 Character', 'Character Card', charBodyEl, true);
+  frag.appendChild(charCard);
+
+  // ─── Scene Cards ───
+  pack.scenes.forEach((scene, i) => {
+    const sceneNum = i + 1;
+    const sceneKey = `scene${sceneNum}`;
+
+    const body = document.createElement('div');
+
+    // Border top for card body
+    body.style.borderTop = '1px solid var(--border)';
+    body.style.paddingTop = '14px';
+
+    // Context
+    if (scene.context) {
+      const ctxWrap = document.createElement('div');
+      ctxWrap.className = 'context-wrap';
+      ctxWrap.style.borderTop = 'none';
+      ctxWrap.style.paddingTop = '0';
+
+      const ctxLabel = document.createElement('div');
+      ctxLabel.className = 'context-label';
+      ctxLabel.textContent = 'Context';
+
+      const ctxText = document.createElement('div');
+      ctxText.className = 'context-text';
+      ctxText.textContent = scene.context;
+
+      ctxWrap.appendChild(ctxLabel);
+      ctxWrap.appendChild(ctxText);
+      body.appendChild(ctxWrap);
+    }
+
+    // Image Prompt
+    body.appendChild(renderPromptBlock('lbl-img', '🖼️', 'Image Prompt',
+      () => scene.imagePrompt,
+      val => { scene.imagePrompt = val; }
+    ));
+
+    // Video Prompt
+    body.appendChild(renderPromptBlock('lbl-vid', '🎥', 'Video Prompt',
+      () => scene.videoPrompt,
+      val => { scene.videoPrompt = val; }
+    ));
+
+    // Dialogue
+    body.appendChild(renderPromptBlock('lbl-dial', '🎙️', 'บทพูด',
+      () => scene.dialogue,
+      val => { scene.dialogue = val; },
+      true
+    ));
+
+    // Media uploads
+    buildMediaSection(sceneKey, body);
+
+    const card = makeCard('badge-scene', `🎬 Scene ${sceneNum}`, scene.title, body, true);
+    frag.appendChild(card);
+  });
+
+  const footer = document.createElement('div');
+  footer.style.cssText = 'text-align:center;color:var(--text-dim);font-size:0.75rem;margin-top:40px;padding-bottom:20px;';
+  footer.textContent = 'TikTok Content Manager — คลิกที่เนื้อหาเพื่อแก้ไข';
+  frag.appendChild(footer);
+
+  return frag;
+}
+
+// ─── Collapsible card builder ─────────────────────────────────────────────────
+function makeCard(badgeClass, badgeText, titleText, bodyEl, startOpen = true) {
+  const card = document.createElement('div');
+  card.className = 'card' + (startOpen ? ' open' : '');
+
+  const header = document.createElement('div');
+  header.className = 'card-header';
+
+  const left = document.createElement('div');
+  left.className = 'card-header-left';
+
+  const badge = document.createElement('span');
+  badge.className = 'scene-badge ' + badgeClass;
+  badge.textContent = badgeText;
+
+  const title = document.createElement('span');
+  title.className = 'card-title';
+  title.textContent = titleText;
+
+  const chevron = document.createElement('span');
+  chevron.className = 'chevron';
+  chevron.textContent = '▼';
+
+  left.appendChild(badge);
+  left.appendChild(title);
+  header.appendChild(left);
+  header.appendChild(chevron);
+
+  const bodyWrap = document.createElement('div');
+  bodyWrap.className = 'card-body';
+  bodyWrap.appendChild(bodyEl);
+
+  header.addEventListener('click', e => {
+    // Don't collapse when clicking inside body
+    if (e.target.closest('.card-body')) return;
+    card.classList.toggle('open');
+  });
+
+  card.appendChild(header);
+  card.appendChild(bodyWrap);
+  return card;
+}
+
+// ─── File API ─────────────────────────────────────────────────────────────────
+async function fetchFiles() {
+  const res = await fetch('/api/files');
+  const data = await res.json();
+  return data.files || [];
+}
+
+async function fetchFile(filename) {
+  const res = await fetch(`/api/file/${encodeURIComponent(filename)}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  return data.content;
+}
+
+async function fetchAssets(packName) {
+  try {
+    const res = await fetch(`/api/assets/${encodeURIComponent(packName)}`);
+    return await res.json();
+  } catch { return {}; }
+}
+
+// ─── Load a file ──────────────────────────────────────────────────────────────
+async function loadFile(filename) {
+  const mainEl = document.getElementById('main-content');
+  mainEl.innerHTML = '<div class="state-msg"><div class="spinner"></div>กำลังโหลด...</div>';
+
+  try {
+    const content = await fetchFile(filename);
+    const pack = parsePack(content);
+    currentFile = filename;
+    currentPack = pack;
+    currentPackName = filename.replace(/\.md$/, '');
+    currentAssets = await fetchAssets(currentPackName);
+
+    mainEl.innerHTML = '';
+    mainEl.appendChild(renderPack(pack));
+    setSaveState('');
+  } catch (e) {
+    mainEl.innerHTML = `<div class="state-msg"><div class="state-icon">❌</div><div class="state-title">โหลดไม่สำเร็จ</div><div class="state-sub">${e.message}</div></div>`;
+  }
+}
+
+// ─── Populate file selector ───────────────────────────────────────────────────
+async function populateFiles(autoLoad = true) {
+  const sel = document.getElementById('file-select');
+  try {
+    const files = await fetchFiles();
+    sel.innerHTML = '';
+
+    if (files.length === 0) {
+      sel.innerHTML = '<option value="">— ไม่พบไฟล์ .md —</option>';
+      const mainEl = document.getElementById('main-content');
+      mainEl.innerHTML = '<div class="state-msg"><div class="state-icon">📭</div><div class="state-title">ยังไม่มีไฟล์</div><div class="state-sub">อัพโหลดไฟล์ .md เพื่อเริ่มต้น</div></div>';
+      return;
+    }
+
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = `— เลือกไฟล์ (${files.length} ไฟล์) —`;
+    sel.appendChild(placeholder);
+
+    files.forEach(f => {
+      const opt = document.createElement('option');
+      opt.value = f;
+      opt.textContent = f.replace(/_/g, ' ').replace(/\.md$/, '');
+      sel.appendChild(opt);
+    });
+
+    if (autoLoad && files.length > 0) {
+      sel.value = files[0];
+      await loadFile(files[0]);
+    }
+  } catch (e) {
+    sel.innerHTML = '<option value="">— เกิดข้อผิดพลาด —</option>';
+  }
+}
+
+// ─── File select handler ──────────────────────────────────────────────────────
+document.getElementById('file-select').addEventListener('change', e => {
+  if (e.target.value) loadFile(e.target.value);
+});
+
+// ─── .md Upload ───────────────────────────────────────────────────────────────
+document.getElementById('upload-md-btn').addEventListener('click', () => {
+  document.getElementById('md-file-input').click();
+});
+
+document.getElementById('md-file-input').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const fd = new FormData();
+  fd.append('file', file);
+  try {
+    const res = await fetch('/api/upload-md', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Upload failed');
+    showToast(`✅ อัพโหลด ${data.filename} แล้ว`);
+    await populateFiles(false);
+    const sel = document.getElementById('file-select');
+    sel.value = data.filename;
+    await loadFile(data.filename);
+  } catch (err) {
+    showToast(`❌ อัพโหลดไม่สำเร็จ: ${err.message}`);
+  }
+  e.target.value = '';
+});
+
+// ─── Drag & Drop on whole page ────────────────────────────────────────────────
+document.addEventListener('dragover', e => {
+  e.preventDefault();
+  document.body.style.outline = '2px dashed var(--accent)';
+});
+document.addEventListener('dragleave', e => {
+  if (!e.relatedTarget || e.relatedTarget === document.documentElement) {
+    document.body.style.outline = '';
+  }
+});
+document.addEventListener('drop', async e => {
+  e.preventDefault();
+  document.body.style.outline = '';
+  const file = e.dataTransfer.files[0];
+  if (!file || !file.name.endsWith('.md')) {
+    showToast('❌ รองรับเฉพาะไฟล์ .md เท่านั้น');
+    return;
+  }
+  const fd = new FormData();
+  fd.append('file', file);
+  try {
+    const res = await fetch('/api/upload-md', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+    showToast(`✅ อัพโหลด ${data.filename} แล้ว`);
+    await populateFiles(false);
+    const sel = document.getElementById('file-select');
+    sel.value = data.filename;
+    await loadFile(data.filename);
+  } catch (err) {
+    showToast(`❌ ${err.message}`);
+  }
+});
+
+// ─── Keyboard: Escape closes modals ──────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.getElementById('lightbox').classList.remove('active');
+    const vm = document.getElementById('video-modal');
+    if (vm.classList.contains('active')) {
+      vm.classList.remove('active');
+      document.getElementById('modal-video').pause();
+      document.getElementById('modal-video').src = '';
+    }
+  }
+});
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+populateFiles(true);
+</script>
+</body>
+</html>
