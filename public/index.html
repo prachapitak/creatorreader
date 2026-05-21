@@ -403,6 +403,30 @@
     .copy-btn:hover { background: var(--surface3); color: var(--text); border-color: var(--border2); }
     .copy-btn.copied { border-color: var(--green); color: var(--green); background: var(--green-dim); }
 
+    /* ─── Copy for Grok button ──────────────────────────────────── */
+    .copy-grok-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      background: linear-gradient(135deg, #1a1200, #2a1e00);
+      border: 1px solid var(--accent);
+      border-radius: var(--radius-xs);
+      color: var(--accent);
+      font-family: 'Sarabun', sans-serif;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+      width: 100%;
+      justify-content: center;
+      margin: 12px 0 4px;
+      letter-spacing: 0.02em;
+    }
+    .copy-grok-btn:hover { background: linear-gradient(135deg, #2a1e00, #3a2a00); filter: brightness(1.1); }
+    .copy-grok-btn.copied { border-color: var(--green); color: var(--green); background: linear-gradient(135deg, #001a00, #002800); }
+
     /* ─── Section divider ────────────────────────────────────────── */
     .section-label {
       display: flex;
@@ -789,7 +813,8 @@ function extractBlockquote(text) {
     .filter(l => l.trim())
     .map(l => l.replace(/^>\s?/, ''))
     .join('\n')
-    .trim();
+    .trim()
+    .replace(/^"+|"+$/g, '');  // strip accumulated quotes
 }
 
 function parsePack(raw) {
@@ -843,7 +868,7 @@ function rebuildMarkdown(pack) {
     if (scene.context) out += `**Context:** ${scene.context}\n\n`;
     out += `### 🖼️ Image Prompt\n\`\`\`\n${scene.imagePrompt}\n\`\`\`\n\n`;
     out += `### 🎥 Video Prompt\n\`\`\`\n${scene.videoPrompt}\n\`\`\`\n\n`;
-    out += `### 🎙️ บทพูด\n> "${scene.dialogue}"\n\n---\n\n`;
+    out += `### 🎙️ บทพูด\n> ${scene.dialogue}\n\n---\n\n`;
   });
 
   return out.trimEnd() + '\n';
@@ -930,6 +955,35 @@ function makeCopyBtn(getTextFn, small = true) {
   return btn;
 }
 
+// ─── Copy for Grok button (Video Prompt + บทพูด รวมกัน) ─────────────────────
+function makeCopyGrokBtn(getVideo, getDialogue) {
+  const btn = document.createElement('button');
+  btn.className = 'copy-grok-btn';
+  btn.innerHTML = '🎬 Copy for Grok — Video Prompt + บทพูด';
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    const text = `🎥 VIDEO PROMPT\n${'─'.repeat(40)}\n${getVideo()}\n\n🎙️ บทพูด (DIALOGUE)\n${'─'.repeat(40)}\n${getDialogue()}`;
+    copyToClipboard(text, btn);
+  });
+  return btn;
+}
+
+// ─── Copy image to clipboard ──────────────────────────────────────────────────
+async function copyImageToClipboard(url, btn) {
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+    const orig = btn.innerHTML;
+    btn.innerHTML = '✅ Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.innerHTML = orig; btn.classList.remove('copied'); }, 2000);
+  } catch {
+    // fallback: copy URL as text
+    copyToClipboard(url, btn);
+  }
+}
+
 // ─── Lightbox ─────────────────────────────────────────────────────────────────
 function openLightbox(url, filename) {
   const lb = document.getElementById('lightbox');
@@ -993,6 +1047,15 @@ function renderImageThumb(pack, scene, filename, galleryEl) {
   const actions = document.createElement('div');
   actions.className = 'thumb-actions';
 
+  const copyImgBtn = document.createElement('button');
+  copyImgBtn.className = 'thumb-action-btn';
+  copyImgBtn.textContent = '📋';
+  copyImgBtn.title = 'Copy รูปไปยัง clipboard';
+  copyImgBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    copyImageToClipboard(imageUrl(pack, scene, filename), copyImgBtn);
+  });
+
   const dlBtn = document.createElement('button');
   dlBtn.className = 'thumb-action-btn';
   dlBtn.textContent = '⬇️';
@@ -1016,6 +1079,7 @@ function renderImageThumb(pack, scene, filename, galleryEl) {
     wrap.remove();
   });
 
+  actions.appendChild(copyImgBtn);
   actions.appendChild(dlBtn);
   actions.appendChild(delBtn);
   wrap.appendChild(img);
@@ -1300,6 +1364,12 @@ function renderPack(pack) {
       () => scene.dialogue,
       val => { scene.dialogue = val; },
       true
+    ));
+
+    // Copy for Grok — combined button
+    body.appendChild(makeCopyGrokBtn(
+      () => scene.videoPrompt,
+      () => scene.dialogue
     ));
 
     // Media uploads
