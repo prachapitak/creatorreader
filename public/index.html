@@ -1047,15 +1047,6 @@ function renderImageThumb(pack, scene, filename, galleryEl) {
   const actions = document.createElement('div');
   actions.className = 'thumb-actions';
 
-  const copyImgBtn = document.createElement('button');
-  copyImgBtn.className = 'thumb-action-btn';
-  copyImgBtn.textContent = '📋';
-  copyImgBtn.title = 'Copy รูปไปยัง clipboard';
-  copyImgBtn.addEventListener('click', e => {
-    e.stopPropagation();
-    copyImageToClipboard(imageUrl(pack, scene, filename), copyImgBtn);
-  });
-
   const dlBtn = document.createElement('button');
   dlBtn.className = 'thumb-action-btn';
   dlBtn.textContent = '⬇️';
@@ -1079,7 +1070,6 @@ function renderImageThumb(pack, scene, filename, galleryEl) {
     wrap.remove();
   });
 
-  actions.appendChild(copyImgBtn);
   actions.appendChild(dlBtn);
   actions.appendChild(delBtn);
   wrap.appendChild(img);
@@ -1170,6 +1160,11 @@ function buildMediaSection(sceneKey, body) {
   imgGallery.className = 'media-gallery';
   imgGallery.id = `gallery-${sceneKey}-images`;
   body.appendChild(imgGallery);
+
+  const imgHint = document.createElement('div');
+  imgHint.style.cssText = 'font-size:0.72rem;color:var(--text-dim);margin:-4px 0 10px;padding-left:2px;';
+  imgHint.textContent = '💡 คลิกขวาที่รูป → Copy Image เพื่อ paste ใน Grok';
+  body.appendChild(imgHint);
 
   // Existing images
   sceneAssets.images.forEach(f => renderImageThumb(pack, sceneKey, f, imgGallery));
